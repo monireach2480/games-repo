@@ -28,7 +28,8 @@ def load_sound(path):
         return None
 
 
-missile_sound = load_sound(join("audio", "missile launching.mp3"))
+# MP3 is not supported on the web, so the missile launch sound is disabled in the web build.
+missile_sound = None
 explosion_sound = load_sound(join("audio", "explosion.wav"))
 
 

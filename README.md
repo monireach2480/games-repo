@@ -49,8 +49,10 @@ Your games will be live at:
 
 ## Notes
 
-- **Audio**: pygbag supports OGG in the browser best. The games currently load WAV/MP3 defensively
-  (sound is skipped if it can't be loaded). To restore sound on the web, convert the sounds to
-  `.ogg` and use that filename in the code. On desktop the original WAV/MP3 files still work.
+- **Audio**: pygbag supports OGG in the browser best. The build uses
+  `--disable-sound-format-error` so WAV files don't block the build (they simply run silent on
+  the web). MP3 is **not allowed on the web at all**, so the drone-hunter MP3 was removed. To
+  restore sound on the web, convert sounds to `.ogg` (e.g. with ffmpeg) and use the `.ogg`
+  filename in the code. On desktop the original WAV/MP3 files in `gamedev/` still work.
 - **Filenames are case-sensitive** on GitHub Pages (Linux). The code uses the exact casing of the
   asset files.
