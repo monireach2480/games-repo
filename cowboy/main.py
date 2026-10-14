@@ -30,21 +30,12 @@ BASE_DIR = "." if sys.platform == "emscripten" else dirname(__file__)
 
 
 def load_sprite(filename, height, width=None, remove_white=False):
-    """Load an image, crop the empty edges, and scale it to the given height."""
-    surf = pygame.image.load(join(BASE_DIR, filename)).convert_alpha()
-
-    if remove_white:
-        # JPGs can't be transparent, so make the near-white background see-through
-        background = pygame.mask.from_threshold(surf, WHITE, (40, 40, 40, 255))
-        background.invert()
-        surf = background.to_surface(setsurface=surf, unsetcolor=(0, 0, 0, 0))
-
-    # The files have a lot of empty space around the picture, so crop it away
-    surf = surf.subsurface(surf.get_bounding_rect()).copy()
+    """Load an image and scale it to the given height (web-safe version)."""
+    surf = pygame.image.load(join(BASE_DIR, filename))
 
     if width is None:
         width = round(surf.get_width() * height / surf.get_height())
-    return pygame.transform.smoothscale(surf, (width, height))
+    return pygame.transform.scale(surf, (width, height))
 
 
 def hitbox(rect):

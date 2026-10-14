@@ -17,10 +17,14 @@ drone_sprites = pygame.sprite.Group()
 missile_sprites = pygame.sprite.Group()
 
 # --- assets ---
-drone_surf = pygame.image.load(join("images", "Drone.png")).convert_alpha()
-missile_surf = pygame.image.load(join("images", "missile.png")).convert_alpha()
-font = pygame.font.Font(join("images", "Oxanium-Bold.ttf"), 40)
-big_font = pygame.font.Font(join("images", "Oxanium-Bold.ttf"), 80)
+drone_surf = pygame.image.load(join("images", "Drone.png"))
+missile_surf = pygame.image.load(join("images", "missile.png"))
+try:
+    font = pygame.font.Font(join("images", "Oxanium-Bold.ttf"), 40)
+    big_font = pygame.font.Font(join("images", "Oxanium-Bold.ttf"), 80)
+except Exception:
+    font = pygame.font.SysFont(None, 40)
+    big_font = pygame.font.SysFont(None, 80)
 def load_sound(path):
     try:
         return pygame.mixer.Sound(path)
@@ -37,11 +41,12 @@ class Jet(pygame.sprite.Sprite):
     def __init__(self, groups):
         super().__init__(groups)
         self.image = pygame.transform.scale(
-            pygame.image.load(join("images", "Jet.png")).convert_alpha(), (140, 90)
+            pygame.image.load(join("images", "Jet.png")), (140, 90)
         )
-        self.rect = self.image.get_frect(center=(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
+        self.rect = self.image.get_rect(center=(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
         self.direction = pygame.math.Vector2()
         self.speed = 300
+        self.space_held = False
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
@@ -54,11 +59,11 @@ class Jet(pygame.sprite.Sprite):
         # Keep the jet inside the window
         self.rect.clamp_ip(display_surface.get_rect())
 
-        recent_keys = pygame.key.get_just_pressed()
-        if recent_keys[pygame.K_SPACE]:
+        if keys[pygame.K_SPACE] and not self.space_held:
             Missile((all_sprites, missile_sprites), missile_surf, self.rect.midtop)
             if missile_sound:
                 missile_sound.play()
+        self.space_held = keys[pygame.K_SPACE]
 
 
 class Missile(pygame.sprite.Sprite):
@@ -67,7 +72,7 @@ class Missile(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(
             surf, (112, 75)
         )
-        self.rect = self.image.get_frect(midbottom=pos)
+        self.rect = self.image.get_rect(midbottom=pos)
 
     def update(self, dt):
         self.rect.y -= 400 * dt
@@ -81,7 +86,7 @@ class Drone(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(
             surf, (112, 75)
         )
-        self.rect = self.image.get_frect(
+        self.rect = self.image.get_rect(
             center=(randint(0, WINDOW_WIDTH), randint(-200, -100))
         )
         self.speed = randint(300, 500)
@@ -106,7 +111,7 @@ def collisions():
 
 def draw_text_center(text, font_used, color, y):
     text_surf = font_used.render(text, True, color)
-    text_rect = text_surf.get_frect(center=(WINDOW_WIDTH / 2, y))
+    text_rect = text_surf.get_rect(center=(WINDOW_WIDTH / 2, y))
     display_surface.blit(text_surf, text_rect)
 
 
@@ -124,16 +129,16 @@ def reset_game():
 def display_score():
     score = (pygame.time.get_ticks() - round_start_time) // 100
     text_surf = font.render(str(score), True, "black")
-    text_rect = text_surf.get_frect(midbottom=(WINDOW_WIDTH / 2, WINDOW_HEIGHT - 50))
+    text_rect = text_surf.get_rect(midbottom=(WINDOW_WIDTH / 2, WINDOW_HEIGHT - 50))
     display_surface.blit(text_surf, text_rect)
 
 
 # --- create sprites ---
 player = Jet(all_sprites)
 
-# --- meteor spawn timer ---
-drone_event = pygame.event.custom_type()
-pygame.time.set_timer(drone_event, 500)
+# --- drone spawn timer (manual) ---
+# pygame.time.set_timer is not implemented on WASM, so spawn drones manually.
+last_drone_spawn = 0
 
 # Game states: "start", "playing", "game_over"
 state = "start"
@@ -142,7 +147,7 @@ final_score = 0
 
 
 async def main():
-    global state
+    global state, last_drone_spawn
 
     running = True
     last_time = pygame.time.get_ticks()
@@ -155,8 +160,6 @@ async def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == drone_event and state == "playing":
-                Drone((all_sprites, drone_sprites), drone_surf)
 
             if event.type == pygame.KEYDOWN:
                 if state == "start" and event.key == pygame.K_SPACE:
@@ -176,6 +179,9 @@ async def main():
             draw_text_center("Press SPACE to start", font, "darkred", WINDOW_HEIGHT / 2 + 80)
 
         elif state == "playing":
+            if now - last_drone_spawn >= 500:
+                Drone((all_sprites, drone_sprites), drone_surf)
+                last_drone_spawn = now
             all_sprites.update(dt)
             collisions()
 
